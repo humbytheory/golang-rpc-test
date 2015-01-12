@@ -15,34 +15,28 @@
 
 # Get repo
 git clone https://github.com/OpenVPN/easy-rsa.git example-ca
-cd example-ca/easyrsa3
 
-# Setup CA
+unzip ~/easy-rsa-master.zip
+cd easy-rsa-master/easyrsa3/
+cp vars.example vars
+
+cat<<_end>>vars
+set_var EASYRSA_REQ_COUNTRY="US"
+set_var EASYRSA_REQ_PROVINCE="NY"
+set_var EASYRSA_REQ_CITY="New York"
+set_var EASYRSA_REQ_ORG="Wakka"
+set_var EASYRSA_REQ_EMAIL="womeone@example.com"
+set_var EASYRSA_REQ_OU="myOU"
+_end
+
 ./easyrsa init-pki
 ./easyrsa build-ca
+./easyrsa --subject-alt-name=IP:1.2.3.4 build-server-full myServer.com nopass
+./easyrsa --subject-alt-name=IP:1.2.3.6 build-client-full myclient.com nopass
 
-# Server Cert and Key
-./easyrsa build-server-full localhost nopass
-
-# Client Setup
-./easyrsa build-client-full 'client0' nopass
-
-# Resulting files
-# pki/ca.crt                # CA cert that can be shared so they trust my keys
-# pki/issued/client0.crt    # RPC client's cert
-# pki/issued/localhost.crt  # RPC server's cert
-# pki/private/ca.key        # CA private key used to sign the RPC certs should be private (never share)
-# pki/private/client0.key   # RPC client's private key
-# pki/private/localhost.key # RPC server's private key should never be shared
-
-###  Summary ###
-# RPC Server
-# pki/ca.crt
-# pki/issued/localhost.crt
-# pki/private/localhost.key
-
-# RPC Client
-# pki/ca.crt
-# pki/issued/client0.crt
-# pki/private/client0.key
-
+cd ../..
+cp easy-rsa-master/easyrsa3/pki/ca.crt .
+cp easy-rsa-master/easyrsa3/pki/issued/myclient.com.crt .
+cp easy-rsa-master/easyrsa3/pki/issued/myServer.com.crt .
+cp easy-rsa-master/easyrsa3/pki/private/myclient.com.key .
+cp easy-rsa-master/easyrsa3/pki/private/myServer.com.key .
