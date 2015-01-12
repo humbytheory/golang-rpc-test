@@ -1,0 +1,48 @@
+# Generate CA Cert
+# go run $GOROOT/src/crypto/tls/generate_cert.go -ca=true -host=MyCAServer
+
+# Generate RPC Server cert and key
+# go run $GOROOT/src/crypto/tls/generate_cert.go -host=localhost
+# mv cert.pem MyRPCServer_cert.pem ; mv key.pem MyRPCServer_key.pem
+
+# Generate RPC Client cert and key
+# mv cert.pem MyRPCClient_cert.pem ; mv key.pem MyRPCClient_key.pem
+
+### Above does not work since the server and client cert are not signed with the CA cert ###
+
+# Using OpenSSL's easy-rsa script #
+# https://github.com/OpenVPN/easy-rsa
+
+# Get repo
+git clone https://github.com/OpenVPN/easy-rsa.git example-ca
+cd example-ca/easyrsa3
+
+# Setup CA
+./easyrsa init-pki
+./easyrsa build-ca
+
+# Server Cert and Key
+./easyrsa build-server-full localhost nopass
+
+# Client Setup
+./easyrsa build-client-full 'client0' nopass
+
+# Resulting files
+# pki/ca.crt                # CA cert that can be shared so they trust my keys
+# pki/issued/client0.crt    # RPC client's cert
+# pki/issued/localhost.crt  # RPC server's cert
+# pki/private/ca.key        # CA private key used to sign the RPC certs should be private (never share)
+# pki/private/client0.key   # RPC client's private key
+# pki/private/localhost.key # RPC server's private key should never be shared
+
+###  Summary ###
+# RPC Server
+# pki/ca.crt
+# pki/issued/localhost.crt
+# pki/private/localhost.key
+
+# RPC Client
+# pki/ca.crt
+# pki/issued/client0.crt
+# pki/private/client0.key
+
