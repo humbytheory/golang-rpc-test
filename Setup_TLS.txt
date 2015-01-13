@@ -41,3 +41,6 @@ cd ../..
 cp easy-rsa-master/easyrsa3/pki/ca.crt .
 cp easy-rsa-master/easyrsa3/pki/issued/*{myServer,myClient}.crt .
 cp easy-rsa-master/easyrsa3/pki/private/*{myServer,myClient}.key .
+
+# View Cert detail
+openssl x509 -in myServer-server.crt -noout -text | less
