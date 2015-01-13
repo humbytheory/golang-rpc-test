@@ -1,0 +1,8 @@
+{
+    "TLSCommonCA" : "./certs/CA.crt",
+    "TLSMyCert"   : "./certs/boxname.crt",
+    "TLSMyKey"    : "./certs/boxname.key",
+    "ServerIP"    : "192.168.0.2",
+    "ServerPort"  : 9881,
+    "ClientIP"    : "192.168.0.2"
+}
