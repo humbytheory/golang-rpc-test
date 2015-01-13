@@ -16,6 +16,8 @@
 # Get repo
 git clone https://github.com/OpenVPN/easy-rsa.git example-ca
 
+# Generate TSL Certs
+
 unzip ~/easy-rsa-master.zip
 cd easy-rsa-master/easyrsa3/
 cp vars.example vars
@@ -25,18 +27,17 @@ set_var EASYRSA_REQ_COUNTRY="US"
 set_var EASYRSA_REQ_PROVINCE="NY"
 set_var EASYRSA_REQ_CITY="New York"
 set_var EASYRSA_REQ_ORG="Wakka"
-set_var EASYRSA_REQ_EMAIL="womeone@example.com"
-set_var EASYRSA_REQ_OU="myOU"
+set_var EASYRSA_REQ_EMAIL="myEamail@myServer.com"
+set_var EASYRSA_REQ_OU="wakka wakka"
 _end
 
 ./easyrsa init-pki
 ./easyrsa build-ca
-./easyrsa --subject-alt-name=IP:1.2.3.4 build-server-full myServer.com nopass
-./easyrsa --subject-alt-name=IP:1.2.3.6 build-client-full myclient.com nopass
+
+./easyrsa --subject-alt-name=IP:192.168.0.2,DNS:myServer.com   build-server-full myServer-server nopass
+./easyrsa --subject-alt-name=IP:192.168.0.2,DNS:myClient.com   build-client-full myClient-client nopass
 
 cd ../..
 cp easy-rsa-master/easyrsa3/pki/ca.crt .
-cp easy-rsa-master/easyrsa3/pki/issued/myclient.com.crt .
-cp easy-rsa-master/easyrsa3/pki/issued/myServer.com.crt .
-cp easy-rsa-master/easyrsa3/pki/private/myclient.com.key .
-cp easy-rsa-master/easyrsa3/pki/private/myServer.com.key .
+cp easy-rsa-master/easyrsa3/pki/issued/*{myServer,myClient}.crt .
+cp easy-rsa-master/easyrsa3/pki/private/*{myServer,myClient}.key .
