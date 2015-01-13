@@ -51,7 +51,6 @@ func PrintSampleConfig(b []byte) {
 
 // Parse given config file into struct
 func ParseConfig(filename string) (c *ConfigSettings) {
-	// log.Fatal(filename)
 	configFile, err := os.Open(filename)
 	if err != nil {
 		log.Fatal("Error opening configuration file: \"", filename, "\"   ", err.Error())
@@ -76,11 +75,7 @@ func ParseConfig(filename string) (c *ConfigSettings) {
 }
 
 // Original is from github.com/hydrogen18/test-tls
-func MustLoadCertificates(myCaCertificate, myCertificate, myPrivateKey string) (tls.Certificate, *x509.CertPool) {
-	privateKeyFile := myPrivateKey
-	certificateFile := myCertificate
-	caFile := myCaCertificate
-
+func MustLoadCertificates(caFile, certificateFile, privateKeyFile string) (tls.Certificate, *x509.CertPool) {
 	mycert, err := tls.LoadX509KeyPair(certificateFile, privateKeyFile)
 	if err != nil {
 		log.Fatal(err)
@@ -99,9 +94,9 @@ func MustLoadCertificates(myCaCertificate, myCertificate, myPrivateKey string) (
 	return mycert, certPool
 }
 
-func MustGetTlsConfiguration(myCaCertificate, myCertificate, myPrivateKey string) *tls.Config {
+func MustGetTlsConfiguration(caFile, certificateFile, privateKeyFile string) *tls.Config {
 	config := &tls.Config{}
-	mycert, certPool := MustLoadCertificates(myCaCertificate, myCertificate, myPrivateKey)
+	mycert, certPool := MustLoadCertificates(caFile, certificateFile, privateKeyFile)
 	config.Certificates = make([]tls.Certificate, 1)
 	config.Certificates[0] = mycert
 

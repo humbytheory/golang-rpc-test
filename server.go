@@ -37,6 +37,7 @@ func shellOut(what string) int {
 	if err := cmd.Run(); err != nil {
 		return ErrorExternal
 	}
+	// log.Println(cmd.Stdout)
 	return ErrorNone
 }
 
