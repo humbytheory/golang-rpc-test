@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,12 +13,13 @@ import (
 
 // Used by the RPC methods
 type Args struct {
-	ClientNmae   string
+	ClientName   string
 	PolicyName   string
 	ScheduleName string
 	ScheduleType string
 	Status       string
-	ResuleFile   string
+	ResultFile   string
+	DryRun       bool
 }
 
 // Use by RPC server and client for RPC status codes
@@ -38,17 +40,26 @@ type ConfigSettings struct {
 	ClientIP        string `json:"ClientIP"`
 }
 
+func PrintSampleConfig(b []byte) {
+	var dat map[string]interface{}
+	if err := json.Unmarshal(b, &dat); err != nil {
+		panic(err)
+	}
+	response, _ := json.MarshalIndent(dat, "", "    ")
+	fmt.Println(string(response))
+}
+
 // Parse given config file into struct
 func ParseConfig(filename string) (c *ConfigSettings) {
 	// log.Fatal(filename)
 	configFile, err := os.Open(filename)
 	if err != nil {
-		log.Fatal("Error opening configuration file: ", filename, " ", err.Error())
+		log.Fatal("Error opening configuration file: \"", filename, "\"   ", err.Error())
 	}
 
 	jsonParser := json.NewDecoder(configFile)
 	if err = jsonParser.Decode(&c); err != nil {
-		log.Fatal("Error parsing configuration file: ", filename, " ", err.Error())
+		log.Fatal("Error parsing configuration file: \"", filename, "\"   ", err.Error())
 	}
 	c.ServerIPPort = c.ServerIP + ":" + strconv.Itoa(c.ServerPort)
 	log.Printf("Settings:")

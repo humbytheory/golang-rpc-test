@@ -22,12 +22,25 @@ Options:
 
 	arguments, _ := docopt.Parse(usage, nil, true, "", false)
 
+	// exit if we are only showing a sample config
+	if arguments["--p"].(bool) {
+		b := []byte(`{"TLSCommonCA":"./certs/CA.crt","TLSMyCert":"./certs/boxname.crt","TLSMyKey":"./certs/boxname.key","ServerIP": "192.168.0.2","ServerPort":8075,"ClientIP":"192.168.0.3"}`)
+		PrintSampleConfig(b)
+		return
+	}
+
+	// Define the Params for the RPC call
+	var args Args
+	args.ClientName = arguments["ONE"].(string)
+	args.PolicyName = arguments["TWO"].(string)
+	args.ScheduleName = arguments["THREE"].(string)
+	args.ScheduleType = arguments["FOUR"].(string)
+	args.Status = arguments["FIVE"].(string)
+	args.ResultFile = arguments["SIX"].(string)
+	args.DryRun = arguments["--d"].(bool)
+
 	// Read configuration from json file and set defaults
 	Settings := ParseConfig(arguments["--c"].(string))
-	log.Fatal(arguments)
-
-	// temp data to send RPC server
-	var args Args
 
 	// Setup TLS and tslConnect
 	config := MustGetTlsConfiguration(Settings.TLSCommonCA, Settings.TLSMyCert, Settings.TLSMyKey)
@@ -49,7 +62,5 @@ Options:
 	if err != nil {
 		log.Fatal("arith error:", err)
 	}
-	// log.Printf("Sent: %v   Recieved: %v\n", args, reply)
-	// log.Printf("Recieved: %v\n", reply.Code)
 	os.Exit(reply.Code)
 }
