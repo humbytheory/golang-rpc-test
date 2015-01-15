@@ -2,6 +2,7 @@
 ###################
 Server.json
 Client.json
+other.txt
 certs/*
 
 # Compiled source #
