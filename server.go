@@ -123,11 +123,6 @@ Options:
 	server.Register(cal)
 	server.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
 
-	//https://groups.google.com/d/topic/golang-nuts/l09ZJQa5Cnk
-	//https://gist.github.com/2232102
-	//https://gist.github.com/2233075
-	//https://gist.github.com/1866829
-
 	// Handle connection from client
 	for {
 		conn, err := listener.Accept()
