@@ -1,15 +1,17 @@
 package main
 
 import (
-	"bytes"
+	// "bytes"
 	"crypto/tls"
 	"github.com/docopt/docopt-go"
 	"log"
 	"net"
 	"net/rpc"
 	"net/rpc/jsonrpc"
+	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"unicode"
 )
 
@@ -24,47 +26,102 @@ var global_ExternalCMDPath string
 var global_ExternalCMD string
 var global_DryRun bool
 var global_DebugLevel string
+var Settings *ConfigSettings
 
 // RPC method struct
 type RPCMethods struct{}
 
 // Used by RPC method to run external command
-func shellOut(what string) int {
-	if global_DebugLevel == "2" {
-		log.Printf("RPC: [%v] c:%s p:%s", what, global_ExternalCMDPath, global_ExternalCMD)
+func shellOut(isClientDryRun bool, filer, volume, snapshot string) int {
+	if global_DryRun || isClientDryRun {
+		log.Printf("RPC Exec Dry Run: Path:%s CMD:%s Filer:%s Volume:%s Snapshot:%s\n", global_ExternalCMDPath, global_ExternalCMD, filer, volume, snapshot)
+		return ErrorDryRun
+	} else {
+		log.Printf("RPC Exec Run: Path:%s CMD:%s Filer:%s Volume:%s Snapshot:%s\n", global_ExternalCMDPath, global_ExternalCMD, filer, volume, snapshot)
+		cmd := exec.Command(global_ExternalCMD, filer, volume, snapshot)
+		// cmd.Dir = global_ExternalCMDPath
+
+		os.Setenv("testvar", global_ExternalCMDPath)
+		// var env []string
+		// env = os.Environ()
+		// log.Println("List of Environtment variables : \n")
+		// for index, value := range env {
+		// 	name := strings.Split(value, "=")
+		// 	log.Printf("[%d] %s : %v\n", index, name[0], name[1])
+		// }
+
+		log.Printf("==> Executing: %s\n", strings.Join(cmd.Args, " "))
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("==> Error: %s\n", err.Error())
+			return ErrorExternal
+		}
+		if len(output) > 0 {
+			log.Printf("==> Output: %s\n", string(output))
+		}
 	}
-	cmd := exec.Command("echo", "-n", "wakka")
-	cmd.Dir = global_ExternalCMDPath
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return ErrorExternal
-	}
-	// log.Println(cmd.Stdout)
 	return ErrorNone
 }
 
 // RPC method that will be called by client
 func (t *RPCMethods) DoSomething(args *Args, reply *Results) error {
-	if global_DebugLevel == "2" {
-		log.Printf("RPC: args: %v  serverDryRun: %v\n", args, global_DryRun)
+	if global_DebugLevel == "1" {
+		log.Printf("RPC: serverDryRun:%v args: %v  \n", global_DryRun, args)
 	}
-	if global_DryRun || args.DryRun {
-		reply.Code = ErrorDryRun
+
+	filer, vol := "", ""
+	reply.Code = ErrorInvalidInput
+
+	for _, validClient := range Settings.Filers {
+		if validClient.Name == args.Client && validClient.Enabled == 1 {
+			filer = validClient.Name
+		}
+	}
+	if filer == "" {
+		log.Printf("RPC: Rejected Invalid Filer: %s\n", args.Client)
 		return nil
 	}
-	if isValidInput(args.Client) {
-		reply.Code = shellOut(args.Client)
-	} else {
-		reply.Code = ErrorInvalidInput
+	if args.Status != "0" {
+		log.Printf("RPC: Rejected Invalid Status: %s\n", args.Status)
+		return nil
 	}
+	if args.SchedType != "FULL" {
+		log.Printf("RPC: Rejected Invalid SchedType: %s\n", args.SchedType)
+		return nil
+	}
+
+	p := strings.Split(args.Path, "/")
+	if len(p) >= 5 {
+		if p[len(p)-1] != Settings.SnapshotName {
+			log.Printf("RPC: Rejected Invalid Snapshot Name: %s\n", p[len(p)-1])
+			return nil
+		}
+		if p[1] != "vol" || p[len(p)-2] != ".snapshot" {
+			log.Printf("RPC: Rejected Invalid Snapshot Path Name: %s\n", p[len(p)-1])
+			return nil
+		}
+		if isValidInput(p[2]) {
+			vol = p[2]
+		} else {
+			log.Printf("RPC: Rejected Invalid Volume: %s\n", p[2])
+			return nil
+		}
+	} else {
+		log.Printf("RPC: Rejected Invalid Path: %s\n", args.Path)
+		return nil
+	}
+	reply.Code = shellOut(args.DryRun, filer, vol, Settings.SnapshotName)
 	return nil
+
 }
 
 // Used by RPM method to report if input data is valid
 func isValidInput(input string) bool {
-	for _, character := range input {
-		if character > unicode.MaxASCII || !unicode.IsPrint(character) {
+	if len(input) < 1 {
+		return false
+	}
+	for _, c := range input {
+		if c > unicode.MaxASCII || !unicode.IsPrint(c) {
 			return false
 		}
 	}
@@ -93,13 +150,13 @@ Options:
 
 	// Exit if we are only showing a sameple config
 	if arguments["--p"].(bool) {
-		b := []byte(`{"TLSCommonCA":"./certs/CA.crt","TLSMyCert":"./certs/boxname.crt","TLSMyKey":"./certs/boxname.key","ServerIP": "192.168.0.2","ServerPort":8075,"ClientIP":"192.168.0.3","ExternalCMDPath":"/tmp","ExternalCMD":"ls"}`)
+		b := []byte(`{"tlscommonca":"/certs/CA.crt","tlscert":"/certs/boxname.crt","tlskey":"/certs/boxname.key","serverip": "192.168.0.2","serverport":8075,"clientip":"192.168.0.3","externalcmdpath":"/tmp","externalcmd":"command"}`)
 		PrintSampleConfig(b)
 		return
 	}
 
 	// Read configuration from json file and set defaults
-	Settings := ParseConfig(arguments["--c"].(string))
+	Settings = ParseConfig(arguments["--c"].(string))
 
 	global_ExternalCMDPath = Settings.ExternalCMDPath
 	global_ExternalCMD = Settings.ExternalCMD
@@ -110,11 +167,12 @@ Options:
 	configIpList[Settings.ClientIP] = true
 
 	// Setup TLS and start listener
-	config := MustGetTlsConfiguration(Settings.TLSCommonCA, Settings.TLSMyCert, Settings.TLSMyKey)
+	config := GetTLSConfig(Settings.TLSCommonCA, Settings.TLSCert, Settings.TLSKey)
+
 	listener, err := tls.Listen("tcp", Settings.ServerIPPort, config)
 	defer listener.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("TLS Error: Failed to start listening: %v\n", err)
 	}
 
 	// Setup RPC server

@@ -24,7 +24,7 @@ Options:
 
 	// exit if we are only showing a sample config
 	if arguments["--p"].(bool) {
-		b := []byte(`{"TLSCommonCA":"./certs/CA.crt","TLSMyCert":"./certs/boxname.crt","TLSMyKey":"./certs/boxname.key","ServerIP": "192.168.0.2","ServerPort":8075,"ClientIP":"192.168.0.3"}`)
+		b := []byte(`{"tlscommonca":"c:/certs/CA.crt","tlscert":"c:/certs/boxname.crt","tlskey":"c:/certs/boxname.key","serverip": "192.168.0.2","serverport":8075}`)
 		PrintSampleConfig(b)
 		return
 	}
@@ -44,7 +44,7 @@ Options:
 	Settings := ParseConfig(arguments["--c"].(string))
 
 	// Setup TLS and tslConnect
-	config := MustGetTlsConfiguration(Settings.TLSCommonCA, Settings.TLSMyCert, Settings.TLSMyKey)
+	config := GetTLSConfig(Settings.TLSCommonCA, Settings.TLSCert, Settings.TLSKey)
 	tslConn, err := tls.Dial("tcp", Settings.ServerIPPort, config)
 	defer tslConn.Close()
 	if err != nil {
